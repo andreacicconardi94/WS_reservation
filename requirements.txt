@@ -1,0 +1,15 @@
+ansible==8.7.0
+blinker
+click
+colorama
+Flask
+gunicorn
+importlib_metadata
+itsdangerous
+Jinja2
+MarkupSafe
+psycopg2==2.9.10
+psycopg2-binary
+python-dotenv
+Werkzeug
+zipp
