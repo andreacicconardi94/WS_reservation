@@ -27,8 +27,10 @@ def create_connection():
             user=DB_USER,
             password=DB_PASSWORD,
             host=DB_HOST,
-            port=DB_PORT
+            port=DB_PORT,
+			gssencmode = "disable"
         )
+        print("Connection successful!")
         return conn
     except Exception as e:
         print("Connection error:", e)
@@ -89,9 +91,8 @@ def cancel(booking_id):
         conn.close()
         return redirect(url_for('index'))
     else:
-        return "Errore di connessione al database"
+        return "Connection error to the database"
 
 # Start the server
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')
-
