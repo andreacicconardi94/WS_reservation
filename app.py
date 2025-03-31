@@ -38,7 +38,7 @@ def index():
     conn = create_connection()
     if conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM bookings ORDER BY date, time_slot;")
+        cursor.execute("SELECT id, user_name, workstation, date, time_slot, end_time FROM bookings ORDER BY date, time_slot;")
         bookings = cursor.fetchall()
         cursor.close()
         conn.close()
