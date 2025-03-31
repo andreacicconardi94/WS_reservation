@@ -28,7 +28,11 @@ def create_connection():
             password=DB_PASSWORD,
             host=DB_HOST,
             port=DB_PORT,
+<<<<<<< HEAD
 			gssencmode = "disable"
+=======
+            gssencmode = "disable"
+>>>>>>> 3103d3926bd3b26d2210cf993b57ba3ff9c8616d
         )
         print("Connection successful!")
         return conn
