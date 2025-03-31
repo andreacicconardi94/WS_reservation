@@ -83,7 +83,8 @@ def book():
     date = request.form['date']
     time_slot = request.form['time_slot']
 
-
+    time_slot = datetime.strptime(time_slot, "%H:%M").strftime("%H:%M:%S")
+	
 	# Set the lenght of each reservation (es. 2 hours)
     duration = timedelta(hours=2)
     start_time = datetime.strptime(time_slot, "%H:%M:%S")
