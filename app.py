@@ -78,31 +78,37 @@ def index():
 
 # Route per add a reservation
 @app.route('/book', methods=['POST'])
+@app.route('/book', methods=['POST'])
 def book():
     user_name = request.form['user_name']
     date = request.form['date']
     time_slot = request.form['time_slot']
 
-    time_slot = datetime.strptime(time_slot, "%H:%M").strftime("%H:%M:%S")
-	
-	# Set the lenght of each reservation (es. 2 hours)
+    # Convert time_slot directly to a datetime object
+    start_time = datetime.strptime(time_slot, "%H:%M")
+
+    # Define reservation duration (e.g., 2 hours)
     duration = timedelta(hours=2)
-    start_time = datetime.strptime(time_slot, "%H:%M:%S")
     end_time = (start_time + duration).strftime("%H:%M:%S")
 
+    # Convert start_time to the correct format for the database
+    time_slot = start_time.strftime("%H:%M:%S")
 
     if user_name and date and time_slot:
         conn = create_connection()
         if conn:
             cursor = conn.cursor()
+            
+            # Check if the slot is already reserved
             cursor.execute("SELECT * FROM bookings WHERE date = %s AND time_slot = %s;", (date, time_slot))
-            if cursor.fetchone():  # Check if the slot is already reserved
+            if cursor.fetchone():
                 cursor.close()
                 conn.close()
                 return redirect(url_for('index', error="The slot is already booked"))
             
-            # Add the reservation
-            cursor.execute("INSERT INTO bookings (user_name, date, time_slot) VALUES (%s, %s, %s);", (user_name, date, time_slot))
+            # Insert the reservation with start_time and end_time
+            cursor.execute("INSERT INTO bookings (user_name, date, time_slot, end_time) VALUES (%s, %s, %s, %s);", 
+                           (user_name, date, time_slot, end_time))
             conn.commit()
             cursor.close()
             conn.close()
@@ -112,6 +118,7 @@ def book():
             return "Connection error to the database"
     else:
         return redirect(url_for('index', error="All fields are mandatory"))
+
 
 # Route per delete a reservation
 @app.route('/cancel/<int:booking_id>', methods=['GET'])
