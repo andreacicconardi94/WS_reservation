@@ -55,7 +55,7 @@ def book():
     time_slot = request.form['time_slot']
 
     # Convert start time to proper format
-    time_slot = datetime.strptime(time_slot, "%H:%M").strftime("%H:%M:%S")
+    time_slot = datetime.strptime(time_slot, "%H:%M").strftime("%H:%M")
 
     # Define reservation duration (e.g., 2 hours)
     duration = timedelta(hours=2)
