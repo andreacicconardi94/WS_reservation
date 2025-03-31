@@ -68,10 +68,10 @@ def index():
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM bookings ORDER BY date, time_slot;")
         bookings = cursor.fetchall()
-		print("DEBUG: Bookings:", bookings)
+        print("DEBUG: Bookings:", bookings)
         cursor.close()
         conn.close()
-		available = is_workstation_available()
+        available = is_workstation_available()
         return render_template('index.html', bookings=bookings, available=available)
     else:
         return "Connection error to the database"
