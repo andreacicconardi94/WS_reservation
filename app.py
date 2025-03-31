@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for
 import psycopg2
 import os
 from dotenv import load_dotenv
-
+from datetime import datetime, timedelta
 
 # Load variable from file .env
 load_dotenv()
@@ -36,6 +36,30 @@ def create_connection():
         print("Connection error:", e)
         return None
 
+
+def is_workstation_available():
+    conn = create_connection()
+    if conn:
+        cursor = conn.cursor()
+        now = datetime.now()
+        current_time = now.strftime("%H:%M:%S")
+        today_date = now.strftime("%Y-%m-%d")
+
+        query = """
+        SELECT * FROM bookings 
+        WHERE date = %s 
+        AND time_slot <= %s 
+        AND end_time >= %s;
+        """
+        cursor.execute(query, (today_date, current_time, current_time))
+        result = cursor.fetchone()
+        cursor.close()
+        conn.close()
+
+        return result is None
+    return False
+
+
 # Route to visualize the reservations
 @app.route('/')
 def index():
@@ -44,9 +68,11 @@ def index():
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM bookings ORDER BY date, time_slot;")
         bookings = cursor.fetchall()
+		print("DEBUG: Bookings:", bookings)
         cursor.close()
         conn.close()
-        return render_template('index.html', bookings=bookings)
+		available = is_workstation_available()
+        return render_template('index.html', bookings=bookings, available=available)
     else:
         return "Connection error to the database"
 
@@ -56,6 +82,13 @@ def book():
     user_name = request.form['user_name']
     date = request.form['date']
     time_slot = request.form['time_slot']
+
+
+	# Set the lenght of each reservation (es. 2 hours)
+    duration = timedelta(hours=2)
+    start_time = datetime.strptime(time_slot, "%H:%M:%S")
+    end_time = (start_time + duration).strftime("%H:%M:%S")
+
 
     if user_name and date and time_slot:
         conn = create_connection()
