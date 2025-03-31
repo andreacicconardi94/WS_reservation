@@ -59,8 +59,8 @@ def book():
 
     # Define reservation duration (e.g., 2 hours)
     duration = timedelta(hours=2)
-    start_time = datetime.strptime(time_slot, "%H:%M:%S")
-    end_time = (start_time + duration).strftime("%H:%M:%S")
+    start_time = datetime.strptime(time_slot, "%H:%M")
+    end_time = (start_time + duration).strftime("%H:%M")
 
     conn = create_connection()
     if conn:
