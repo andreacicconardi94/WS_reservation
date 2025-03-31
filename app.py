@@ -7,10 +7,7 @@ from datetime import datetime, timedelta
 # Load variable from file .env
 load_dotenv()
 
-print("DB_HOST:", os.getenv("DB_HOST"))
-
-
-# Set the database
+# Database credentials
 DB_USER = os.getenv("DB_USER")
 DB_HOST = os.getenv("DB_HOST")
 DB_NAME = os.getenv("DB_NAME")
@@ -28,39 +25,14 @@ def create_connection():
             password=DB_PASSWORD,
             host=DB_HOST,
             port=DB_PORT,
-			gssencmode = "disable"
+            gssencmode="disable"
         )
-        print("Connection successful!")
         return conn
     except Exception as e:
         print("Connection error:", e)
         return None
 
-
-def is_workstation_available():
-    conn = create_connection()
-    if conn:
-        cursor = conn.cursor()
-        now = datetime.now()
-        current_time = now.strftime("%H:%M:%S")
-        today_date = now.strftime("%Y-%m-%d")
-
-        query = """
-        SELECT * FROM bookings 
-        WHERE date = %s 
-        AND time_slot <= %s 
-        AND end_time >= %s;
-        """
-        cursor.execute(query, (today_date, current_time, current_time))
-        result = cursor.fetchone()
-        cursor.close()
-        conn.close()
-
-        return result is None
-    return False
-
-
-# Route to visualize the reservations
+# Route to visualize reservations
 @app.route('/')
 def index():
     conn = create_connection()
@@ -68,62 +40,62 @@ def index():
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM bookings ORDER BY date, time_slot;")
         bookings = cursor.fetchall()
-        print("DEBUG: Bookings:", bookings)
         cursor.close()
         conn.close()
-        available = is_workstation_available()
-        return render_template('index.html', bookings=bookings, available=available)
+        return render_template('index.html', bookings=bookings)
     else:
         return "Connection error to the database"
 
-# Route per add a reservation
-@app.route('/book', methods=['POST'])
+# Route to add a reservation
 @app.route('/book', methods=['POST'])
 def book():
     user_name = request.form['user_name']
+    workstation = int(request.form['workstation'])  # Workstation choice
     date = request.form['date']
     time_slot = request.form['time_slot']
 
-    # Convert time_slot directly to a datetime object
-    try:
-        start_time = datetime.strptime(time_slot, "%H:%M")
-    except:
-        start_time = datetime.strptime(time_slot, "%H:%M:%S")
+    # Convert start time to proper format
+    time_slot = datetime.strptime(time_slot, "%H:%M").strftime("%H:%M:%S")
 
     # Define reservation duration (e.g., 2 hours)
     duration = timedelta(hours=2)
+    start_time = datetime.strptime(time_slot, "%H:%M:%S")
     end_time = (start_time + duration).strftime("%H:%M:%S")
 
-    # Convert start_time to the correct format for the database
-    time_slot = start_time.strftime("%H:%M:%S")
+    conn = create_connection()
+    if conn:
+        cursor = conn.cursor()
 
-    if user_name and date and time_slot:
-        conn = create_connection()
-        if conn:
-            cursor = conn.cursor()
-            
-            # Check if the slot is already reserved
-            cursor.execute("SELECT * FROM bookings WHERE date = %s AND time_slot = %s;", (date, time_slot))
-            if cursor.fetchone():
-                cursor.close()
-                conn.close()
-                return redirect(url_for('index', error="The slot is already booked"))
-            
-            # Insert the reservation with start_time and end_time
-            cursor.execute("INSERT INTO bookings (user_name, date, time_slot, end_time) VALUES (%s, %s, %s, %s);", 
-                           (user_name, date, time_slot, end_time))
-            conn.commit()
+        # Check for overlapping reservations on the same workstation
+        query = """
+        SELECT * FROM bookings 
+        WHERE date = %s 
+        AND workstation = %s
+        AND (
+            (time_slot <= %s AND end_time > %s) OR
+            (time_slot < %s AND end_time >= %s)
+        );
+        """
+        cursor.execute(query, (date, workstation, end_time, end_time, time_slot, time_slot))
+        
+        if cursor.fetchone():  # If a conflicting booking is found
             cursor.close()
             conn.close()
+            return redirect(url_for('index', error="The slot is already booked on this workstation"))
 
-            return redirect(url_for('index'))
-        else:
-            return "Connection error to the database"
+        # Insert the new booking
+        cursor.execute(
+            "INSERT INTO bookings (user_name, workstation, date, time_slot, end_time) VALUES (%s, %s, %s, %s, %s);",
+            (user_name, workstation, date, time_slot, end_time)
+        )
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return redirect(url_for('index'))
     else:
-        return redirect(url_for('index', error="All fields are mandatory"))
+        return "Connection error to the database"
 
-
-# Route per delete a reservation
+# Route to delete a reservation
 @app.route('/cancel/<int:booking_id>', methods=['GET'])
 def cancel(booking_id):
     conn = create_connection()
